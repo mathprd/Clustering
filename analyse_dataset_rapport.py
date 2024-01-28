@@ -10,36 +10,20 @@ import scipy.cluster.hierarchy as shc
 # Récupération des données
 
 def get_data(fichier):
-    #
-    # =============================================================================
-    # Parser un fichier de donnees au format arff
-    # data est un tableau d ’ exemples avec pour chacun
-    # la liste des valeurs des features
-    # Dans les jeux de donnees consideres :
-    # il y a 2 features ( dimension 2 )
-    # Ex : [[ - 0 . 499261 , -0 . 0612356 ] ,
-    # [ - 1 . 51369 , 0 . 265446 ] ,
-    # [ - 1 . 60321 , 0 . 362039 ] , .....
-    # ]
-    # Note : chaque exemple du jeu de donnees contient aussi un
-    # numero de cluster . On retire cette information
-    # =============================================================================
-    path = './clustering-benchmark-master/src/main/resources/datasets/artificial/'
-    databrut = arff.loadarff (open(path + fichier + ".arff", 'r') )
-    datanp = [ [ x[ 0 ] ,x[ 1 ] ] for x in databrut[ 0 ] ]
-
-    # Affichage en 2D
-    # Extraire chaque valeur de features pour en faire une liste
-    # Ex pour f0 = [ - 0 . 499261 , -1 . 51369 , -1 . 60321 , ...]
-    # Ex pour f1 = [ - 0 . 0612356 , 0 . 265446 , 0 . 362039 , ...]
+   
+    path = './dataset-rapport/'
+    datanp = []
+    with open(path + fichier + ".txt", 'r') as file:
+        for ligne in file:
+            colonnes = ligne.split()  # Supposons que les colonnes sont séparées par des espaces
+            if len(colonnes) == 2:  # Assurez-vous qu'il y a deux colonnes dans chaque ligne
+                colonnes[0] = float(colonnes[0])
+                colonnes[1] = float(colonnes[1])
+                datanp.append(colonnes)
     f0 = [x[0] for x in datanp] # tous les elements de la premiere colonne
     f1 = [x[1] for x in datanp] # tous les elements de la deuxieme colonne
-# =============================================================================
-#     plt.scatter(f0, f1, s = 8)
-#     plt.title ("Donnees initiales")
-#     plt.show()
-# =============================================================================
     return [datanp, f0, f1]
+
 
 #Permet de vérifier qu'il y a au mois 2 labels, sinon la méthode evaluation_clustering ne fonctionne pas
 def check_nb_labels(label):
@@ -75,7 +59,7 @@ def print_cluster_optimal_k_means (fichier):
     
     best_k = [2, 2, 2]
     best = [-1, 1000000000, 0]
-    for k in range(2,6):
+    for k in range(2,16):
         #
         # Les donnees sont dans datanp ( 2 dimensions )
         # f0 : valeurs sur la premiere dimension
@@ -124,7 +108,7 @@ def afficher_dendrogramme (fichier):
     
     # Donnees dans datanp
     print("Dendrogramme 'single' donnees initiales")
-    linked_mat = shc.linkage(datanp, 'ward')
+    linked_mat = shc.linkage(datanp, 'single')
     plt.figure(figsize =( 12 , 12 ))
     shc.dendrogram(linked_mat, orientation = 'top', distance_sort ='descending', show_leaf_counts = False )
     plt.show ()
@@ -135,7 +119,7 @@ def clustering_hierarchique_distance(fichier, distance):
     
     # set di stance_threshold ( 0 ensures we compute the full tree )
     tps1 = time.time ()
-    model = cluster.AgglomerativeClustering( distance_threshold = distance , linkage = 'complete' , n_clusters = None )
+    model = cluster.AgglomerativeClustering( distance_threshold = distance , linkage = 'single' , n_clusters = None )
     model = model.fit(datanp)
     tps2 = time.time()
     labels = model.labels_
@@ -167,7 +151,7 @@ def clustering_hierarchique_cluster (fichier, nb_cluster):
     
     # set the number of clusters
     tps1 = time.time()
-    model = cluster.AgglomerativeClustering ( linkage = 'single' , n_clusters = nb_cluster )
+    model = cluster.AgglomerativeClustering ( linkage = 'ward' , n_clusters = nb_cluster )
     model = model.fit ( datanp )
     tps2 = time.time ()
     labels = model.labels_
@@ -198,19 +182,19 @@ def best_clustering_distance (fichier, method):
     
     best_distance = [0, 0, 0]
     best = [-1, 1000000000, 0]
-    for k in np.arange(0.01,1, 0.01):
+    for k in np.arange(1, 100, 1):
         
-        [labels, tps1, tps2, nb_cluster, leaves] = clustering_hierarchique_distance2(datanp, k, method)
+        [labels, tps1, tps2, nb_cluster, leaves] = clustering_hierarchique_distance2(datanp, (k*10**5), method)
         [silhouette, davies, calinski] = evaluation_clustering(datanp, labels)
         if (silhouette > best[0]):
             best[0] = silhouette
-            best_distance[0] = k
+            best_distance[0] = k*10**5
         if (davies < best[1]):
             best[1] = davies
-            best_distance[1] = k
+            best_distance[1] = k*10**5
         if (calinski > best[2]):
             best[2] = calinski
-            best_distance[2] = k
+            best_distance[2] = k*10**5
     compteur = 0
     for i in best_distance:
         
@@ -235,7 +219,7 @@ def best_clustering_nb_cluster (fichier, method):
     
     best_nb_cluster = [0, 0, 0]
     best = [-1, 1000000000, 0]
-    for k in range(2, 6):
+    for k in range(2, 16):
         [labels, tps1, tps2, nb_cluster, leaves] = clustering_hierarchique_cluster2(datanp, k, method)
         [silhouette, davies, calinski] = evaluation_clustering(datanp, labels)
         if (silhouette > best[0]):
@@ -267,13 +251,12 @@ def best_clustering_nb_cluster (fichier, method):
         plt.show()
     
 
-#print_cluster_optimal_k_means("rings")
-#afficher_dendrogramme("rings")
-#clustering_hierarchique_distance("rings", 22)
-#clustering_hierarchique_cluster("cassini", 3)
-#best_clustering_distance("rings", 'complete')
-#best_clustering_nb_cluster("rings", 'average')
-
+#print_cluster_optimal_k_means("zz2")
+#afficher_dendrogramme("x1")
+#clustering_hierarchique_distance("x1", 3*10**4)
+#clustering_hierarchique_cluster("x1", 15)
+#best_clustering_distance("x1", 'single')
+best_clustering_nb_cluster("zz2", 'ward')
 
     
 
